@@ -1,0 +1,49 @@
+services:
+  evolution-go:
+    image: atendai/evolution-go:latest
+    container_name: evolution_go_api
+    ports:
+      - "8080:8080"
+    env_file: .env
+    depends_on:
+      postgres-ev:
+        condition: service_healthy
+      redis-ev:
+        condition: service_healthy
+    networks:
+      - ev_network
+
+  postgres-ev:
+    image: postgres:15-alpine
+    container_name: postgres_ev
+    environment:
+      POSTGRES_DB: evolution
+      POSTGRES_USER: evolution_user
+      POSTGRES_PASSWORD: evolution_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution_user -d evolution"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ev_network
+    volumes:
+      - pgdata_ev:/var/lib/postgresql/data
+
+  redis-ev:
+    image: redis:7-alpine
+    container_name: redis_ev
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ev_network
+
+networks:
+  ev_network:
+    driver: bridge
+
+volumes:
+  pgdata_ev:
