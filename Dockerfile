@@ -1,6 +1,7 @@
-FROM golang:1.25.0-alpine AS build
+# Estágio de Build
+FROM golang:1.24-alpine AS build
 
-# Instalação de dependências de compilação
+# Dependências nativas para CGO e compilação da Evolution
 RUN apk update && apk add --no-cache \
     git \
     build-base \
@@ -8,43 +9,44 @@ RUN apk update && apk add --no-cache \
     ffmpeg \
     libjpeg-turbo-dev \
     libwebp-dev \
-    ca-certificates
+    ca-certificates \
+    postgresql-dev
 
 WORKDIR /build
 
-# Passo 1: Copiar explicitamente a biblioteca local antes de tudo
-# Isso garante que mesmo que o COPY . . falhe por algum motivo de ignore,
-# esta pasta será enviada.
-COPY whatsmeow-lib/ ./whatsmeow-lib/
-
-# Passo 2: Validar se o arquivo existe (Isso fará o build falhar aqui com um erro claro se a pasta estiver vazia)
-RUN ls -l ./whatsmeow-lib/go.mod
-
-# Passo 3: Copiar o restante dos arquivos
+# Copia tudo (Assumindo que você seguiu a Solução 2 e a pasta agora está no Git)
 COPY . .
 
-# Passo 4: Configurar o Go
-# Removemos o 'go mod tidy' temporariamente para usar o 'download' direto, 
-# pois o tidy tenta baixar tudo de novo e pode se perder com o replace local.
+# Validação crítica para o log do Railway
+RUN if [ ! -f "./whatsmeow-lib/go.mod" ]; then echo "ERRO: whatsmeow-lib não encontrada no repositório!"; exit 1; fi
+
+# Download das dependências
 RUN go mod download
 
+# Build do binário
 ARG VERSION=dev
 RUN CGO_ENABLED=1 go build -ldflags "-X main.version=${VERSION}" -o server ./cmd/evolution-go
 
-FROM alpine:3.19.1 AS final
+# Estágio Final (Runtime)
+FROM alpine:3.19 AS final
 
-RUN apk update && apk add --no-cache tzdata ffmpeg libjpeg-turbo libwebp
+RUN apk update && apk add --no-cache \
+    tzdata \
+    ffmpeg \
+    libjpeg-turbo \
+    libwebp \
+    ca-certificates \
+    libpq
 
 WORKDIR /app
 
-RUN mkdir -p /app/manager/dist
-
+# Copia o binário e assets necessários
 COPY --from=build /build/server .
-COPY --from=build /build/manager/dist ./manager/dist
 COPY --from=build /build/VERSION ./VERSION
+# O manager pode não existir se não for buildado antes, tratamos com condicional
+COPY --from=build /build/manager/dist* ./manager/dist/
 
 ENV TZ=America/Sao_Paulo
-
 EXPOSE 8080
 
 ENTRYPOINT ["/app/server"]
