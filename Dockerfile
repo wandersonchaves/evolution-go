@@ -1,7 +1,6 @@
-# Estágio de Build
 FROM golang:1.24-alpine AS build
 
-# Dependências nativas para CGO e compilação da Evolution
+# Build-base é essencial para CGO (utilizado pela whatsmeow para crypto)
 RUN apk update && apk add --no-cache \
     git \
     build-base \
@@ -14,20 +13,23 @@ RUN apk update && apk add --no-cache \
 
 WORKDIR /build
 
-# Copia tudo (Assumindo que você seguiu a Solução 2 e a pasta agora está no Git)
+# Copia tudo para o contexto de build
 COPY . .
 
-# Validação crítica para o log do Railway
-RUN if [ ! -f "./whatsmeow-lib/go.mod" ]; then echo "ERRO: whatsmeow-lib não encontrada no repositório!"; exit 1; fi
+# Validação: Se falhar aqui, o passo 1 (acima) não foi executado corretamente no seu Git
+RUN if [ ! -f "./whatsmeow-lib/go.mod" ]; then \
+    echo "ERRO CRÍTICO: whatsmeow-lib/go.mod não encontrado no contexto de build!"; \
+    ls -la; \
+    exit 1; \
+fi
 
-# Download das dependências
+# Instala dependências
 RUN go mod download
 
-# Build do binário
+# Build com CGO habilitado
 ARG VERSION=dev
 RUN CGO_ENABLED=1 go build -ldflags "-X main.version=${VERSION}" -o server ./cmd/evolution-go
 
-# Estágio Final (Runtime)
 FROM alpine:3.19 AS final
 
 RUN apk update && apk add --no-cache \
@@ -40,10 +42,10 @@ RUN apk update && apk add --no-cache \
 
 WORKDIR /app
 
-# Copia o binário e assets necessários
+# Copia o binário e os arquivos do Manager (Interface da Evolution)
 COPY --from=build /build/server .
 COPY --from=build /build/VERSION ./VERSION
-# O manager pode não existir se não for buildado antes, tratamos com condicional
+# O copy com wildcard evita erro caso a pasta manager/dist não exista na build
 COPY --from=build /build/manager/dist* ./manager/dist/
 
 ENV TZ=America/Sao_Paulo
