@@ -1,25 +1,27 @@
 FROM golang:1.25.0-alpine AS build
 
-RUN apk update && apk add --no-cache tzdata ffmpeg libjpeg-turbo libwebp ca-certificates
+# Instalação de dependências de compilação (CGO requer build-base)
+RUN apk update && apk add --no-cache \
+    git \
+    build-base \
+    tzdata \
+    ffmpeg \
+    libjpeg-turbo-dev \
+    libwebp-dev \
+    ca-certificates
 
 WORKDIR /build
 
-# Copiar apenas arquivos de dependências primeiro para cachear o download
-COPY go.mod go.sum ./
-
-# Copiar whatsmeow-lib que é uma dependência local
-COPY whatsmeow-lib/ ./whatsmeow-lib/
-
-# 3. Verificação de segurança para o log do build (opcional, ajuda a depurar no Railway)
-RUN ls -R ./whatsmeow-lib
-
-# Agora fazer download das dependências (com replace funcionando)
-RUN go mod download
-
-# Copiar o restante do código
+# Em vez de copiar picado, copiamos o contexto inteiro para garantir o replace
+# O .dockerignore deve estar configurado para não subir lixo
 COPY . .
 
+# Agora forçamos o tidy e o download com o contexto local já presente
+RUN go mod tidy
+RUN go mod download
+
 ARG VERSION=dev
+# Compilação com CGO habilitado para suporte a processamento de imagem/video
 RUN CGO_ENABLED=1 go build -ldflags "-X main.version=${VERSION}" -o server ./cmd/evolution-go
 
 FROM alpine:3.19.1 AS final
