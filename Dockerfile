@@ -10,6 +10,9 @@ COPY go.mod go.sum ./
 # Copiar whatsmeow-lib que é uma dependência local
 COPY whatsmeow-lib/ ./whatsmeow-lib/
 
+# 3. Verificação de segurança para o log do build (opcional, ajuda a depurar no Railway)
+RUN ls -R ./whatsmeow-lib
+
 # Agora fazer download das dependências (com replace funcionando)
 RUN go mod download
 
