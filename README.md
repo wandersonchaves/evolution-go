@@ -86,13 +86,13 @@ LOGTYPE=console
 # MINIO_SECRET_KEY=minioadmin
 ```
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SERVER_PORT` | Server port | `8080` |
-| `CLIENT_NAME` | Client identifier | `evolution` |
-| `GLOBAL_API_KEY` | API authentication key | **Required** |
-| `DATABASE_SAVE_MESSAGES` | Enable message storage | `false` |
-| `WADEBUG` | WhatsApp debug level | `INFO` |
+| Variable                 | Description            | Default      |
+| ------------------------ | ---------------------- | ------------ |
+| `SERVER_PORT`            | Server port            | `8080`       |
+| `CLIENT_NAME`            | Client identifier      | `evolution`  |
+| `GLOBAL_API_KEY`         | API authentication key | **Required** |
+| `DATABASE_SAVE_MESSAGES` | Enable message storage | `false`      |
+| `WADEBUG`                | WhatsApp debug level   | `INFO`       |
 
 ## License Activation
 
@@ -116,14 +116,14 @@ http://localhost:8080/swagger/index.html
 
 ### Key Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/instance/create` | Create WhatsApp instance |
-| `GET` | `/instance/{name}/qrcode` | Get QR code for pairing |
-| `POST` | `/message/sendText` | Send text message |
-| `POST` | `/message/sendMedia` | Send media message |
-| `GET` | `/instance/{name}/status` | Get instance status |
-| `DELETE` | `/instance/{name}` | Delete instance |
+| Method   | Endpoint                  | Description              |
+| -------- | ------------------------- | ------------------------ |
+| `POST`   | `/instance/create`        | Create WhatsApp instance |
+| `GET`    | `/instance/{name}/qrcode` | Get QR code for pairing  |
+| `POST`   | `/message/sendText`       | Send text message        |
+| `POST`   | `/message/sendMedia`      | Send media message       |
+| `GET`    | `/instance/{name}/status` | Get instance status      |
+| `DELETE` | `/instance/{name}`        | Delete instance          |
 
 ## Project Structure
 
@@ -149,35 +149,35 @@ evolution-go/
 
 ## Technology Stack
 
-| Component | Technology |
-|-----------|-----------|
-| Language | Go 1.24+ |
-| HTTP Framework | Gin |
-| WhatsApp | [whatsmeow](https://github.com/tulir/whatsmeow) |
-| Database | PostgreSQL |
-| ORM | GORM |
-| Message Queue | RabbitMQ, NATS |
-| Object Storage | MinIO/S3 |
-| Documentation | Swagger/OpenAPI |
-| Container | Docker |
+| Component      | Technology                                      |
+| -------------- | ----------------------------------------------- |
+| Language       | Go 1.24+                                        |
+| HTTP Framework | Gin                                             |
+| WhatsApp       | [whatsmeow](https://github.com/tulir/whatsmeow) |
+| Database       | PostgreSQL                                      |
+| ORM            | GORM                                            |
+| Message Queue  | RabbitMQ, NATS                                  |
+| Object Storage | MinIO/S3                                        |
+| Documentation  | Swagger/OpenAPI                                 |
+| Container      | Docker                                          |
 
 ## Documentation & Support
 
-| Resource | Link |
-|----------|------|
-| Website | [evolutionfoundation.com.br](https://evolutionfoundation.com.br/) |
-| Documentation | [docs.evolutionfoundation.com.br](https://docs.evolutionfoundation.com.br/) |
-| Community | [evolutionfoundation.com.br/community](https://evolutionfoundation.com.br/community) |
-| WhatsApp Support | [+55 31 7503-8350](https://wa.me/553175038350) |
-| GitHub Issues | [evolution-go/issues](https://github.com/EvolutionAPI/evolution-go/issues) |
+| Resource         | Link                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------ |
+| Website          | [evolutionfoundation.com.br](https://evolutionfoundation.com.br/)                    |
+| Documentation    | [docs.evolutionfoundation.com.br](https://docs.evolutionfoundation.com.br/)          |
+| Community        | [evolutionfoundation.com.br/community](https://evolutionfoundation.com.br/community) |
+| WhatsApp Support | [+55 31 7503-8350](https://wa.me/553175038350)                                       |
+| GitHub Issues    | [evolution-go/issues](https://github.com/EvolutionAPI/evolution-go/issues)           |
 
 ## Hosting
 
 Deploy Evolution Go with optimized infrastructure:
 
-| Product | Link |
-|---------|------|
-| Evolution Go VPS | [Hostgator - Evo Go](https://www.hostgator.com.br/52579-144-3-55.html) |
+| Product           | Link                                                                                            |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| Evolution Go VPS  | [Hostgator - Evo Go](https://www.hostgator.com.br/52579-144-3-55.html)                          |
 | Evolution API VPS | [Hostgator - Evo API](https://www.hostgator.com.br/servidor-vps/hospedagem-evo-api/lp-afiliado) |
 
 ## Contributing
