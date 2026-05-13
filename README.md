@@ -99,7 +99,7 @@ LOGTYPE=console
 Evolution Go requires a license to operate. On first run:
 
 1. Start the server — API endpoints return `503` until activated
-2. Open the **Manager** at `http://localhost:8080/manager/login`
+2. Open the **Manager** at `{{baseURL}manager/login`
 3. Enter your API URL and `GLOBAL_API_KEY`
 4. Complete the license registration flow
 5. Once activated, the API is fully operational
@@ -111,7 +111,7 @@ The license status persists in the database (`runtime_configs` table). Heartbeat
 Swagger UI available at:
 
 ```
-http://localhost:8080/swagger/index.html
+{{baseURL}swagger/index.html
 ```
 
 ### Key Endpoints
@@ -222,3 +222,10 @@ Made with ❤️ by the [Evolution Team](https://evolutionfoundation.com.br/)
 © 2025 Evolution Foundation
 
 </div>
+
+Configure DNS Records
+Add the following DNS records to evo-go.com
+| Type  | Name                   | Value                                                                           |
+| ----- | ---------------------- | ------------------------------------------------------------------------------- |
+| CNAME | api-wa                 | q8zqroky.up.railway.app                                                         |
+| TXT   | _railway-verify.api-wa | railway-verify=6da4744533ce40d3163066922e5385c1c44232cbac32461a34890e31a299dca9 |

@@ -60,6 +60,7 @@ type Config struct {
 	EventIgnoreStatus    bool
 	QrcodeMaxCount       int
 	CheckUserExists      bool
+	TelemetryEnabled     bool
 
 	// Logger configurations
 	LogMaxSize    int
@@ -279,6 +280,11 @@ func Load() *Config {
 		checkUserExists = "true"
 	}
 
+	telemetryEnabled := os.Getenv(config_env.TELEMETRY_ENABLED)
+	if telemetryEnabled == "" {
+		telemetryEnabled = "true"
+	}
+
 	// Convertendo para int com valores padrão caso estejam vazios
 	major := 0
 	if whatsappVersionMajor != "" {
@@ -373,6 +379,7 @@ func Load() *Config {
 		EventIgnoreStatus:    eventIgnoreStatus == "true",
 		QrcodeMaxCount:       qrMaxCount,
 		CheckUserExists:      checkUserExists != "false", // Default true, set to false to disable
+		TelemetryEnabled:     telemetryEnabled != "false", // Default true
 		AmqpGlobalEvents:     amqpGlobalEvents,
 		AmqpSpecificEvents:   amqpSpecificEvents,
 		NatsUrl:              natsUrl,

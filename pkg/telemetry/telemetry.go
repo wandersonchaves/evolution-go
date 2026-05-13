@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/EvolutionAPI/evolution-go/pkg/config"
 )
 
 type TelemetryData struct {
@@ -16,10 +17,16 @@ type TelemetryData struct {
 	Timestamp  time.Time `json:"timestamp"`
 }
 
-type telemetryService struct{}
+type telemetryService struct {
+	config *config.Config
+}
 
 func (t *telemetryService) TelemetryMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if !t.config.TelemetryEnabled {
+			c.Next()
+			return
+		}
 		route := c.FullPath()
 		go SendTelemetry(route)
 		c.Next()
@@ -51,12 +58,15 @@ func SendTelemetry(route string) {
 
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
 	if err != nil {
-		log.Println("Erro ao enviar telemetria:", err)
+		// Log removed to avoid noise when telemetry host is unreachable
+		// log.Println("Erro ao enviar telemetria:", err)
 		return
 	}
 	defer resp.Body.Close()
 }
 
-func NewTelemetryService() TelemetryService {
-	return &telemetryService{}
+func NewTelemetryService(cfg *config.Config) TelemetryService {
+	return &telemetryService{
+		config: cfg,
+	}
 }
