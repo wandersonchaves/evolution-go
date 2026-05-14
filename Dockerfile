@@ -44,9 +44,8 @@ RUN apk update && apk add --no-cache \
 WORKDIR /app
 
 COPY --from=build /build/server .
+COPY --from=build /build/manager/dist ./manager/dist
 COPY --from=build /build/VERSION ./VERSION
-# O manager/dist pode ser opcional dependendo do seu gitignore
-COPY --from=build /build/manager/dist* ./manager/dist/
 
 ENV TZ=America/Sao_Paulo
 EXPOSE 8080
