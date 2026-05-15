@@ -526,8 +526,9 @@ func (s *sendService) validateAndCheckUserExists(phone string, formatJid *bool, 
 	// First attempt with formatJid=false
 	remoteJID, found, err := s.checkSingleUserExists(client, phone, formatJidForCheck, instance.Id)
 	if err != nil {
-		s.loggerWrapper.GetLogger(instance.Id).LogWarn("[%s] Failed to check user existence: %v", instance.Id, err)
-		// Continue with sending even if check fails (network issues, etc.)
+		s.loggerWrapper.GetLogger(instance.Id).LogWarn("[%s] Failed to check user existence (timeout or network): %v. Proceeding with message delivery as fallback.", instance.Id, err)
+		// CRITICAL PERFORMANCE FIX: If check fails due to timeout/connection, 
+		// proceed anyway instead of returning error.
 		return validateMessageFields(phone, formatJid, messageID, participant)
 	}
 
