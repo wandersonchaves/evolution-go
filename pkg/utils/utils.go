@@ -103,7 +103,7 @@ func CreateJID(number string) (string, error) {
 			return r
 		}
 		return -1
-	}, number)
+	}, strings.TrimSpace(number))
 
 	if number == "" {
 		return "", fmt.Errorf("invalid number format")
@@ -114,11 +114,6 @@ func CreateJID(number string) (string, error) {
 
 	// Format BR (55) numbers
 	number = formatBRNumber(number)
-
-	// Add + prefix for international format
-	if !strings.HasPrefix(number, "+") {
-		number = "+" + number
-	}
 
 	return number + "@s.whatsapp.net", nil
 }
