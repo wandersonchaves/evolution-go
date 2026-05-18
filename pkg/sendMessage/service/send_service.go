@@ -449,9 +449,11 @@ func (s *sendService) ensureClientConnectedWithRetry(instanceId string, maxRetri
 }
 
 func validateMessageFields(phone string, formatJid *bool, messageID *string, participant *string) (types.JID, error) {
-	// Always trim spaces to prevent protocol errors (Error 463)
+	// Brutal cleanup of all whitespace characters (regular spaces, NBSP, tabs, etc)
+	re := regexp.MustCompile(`\s+@`)
+	phone = re.ReplaceAllString(phone, "@")
+	phone = strings.ReplaceAll(phone, " ", "")
 	phone = strings.TrimSpace(phone)
-	phone = strings.ReplaceAll(phone, " @", "@")
 
 	// Apply formatting if formatJid is true (default)
 	shouldFormat := true // Default value
