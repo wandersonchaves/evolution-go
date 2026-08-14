@@ -1,45 +1,26 @@
-# Alterado para 1.25 para satisfazer a restrição do go.mod
-FROM golang:1.25-alpine AS build
+FROM golang:1.25.0-alpine AS build
 
-# Configuração para garantir que o Go use a versão correta se necessário
-ENV GOTOOLCHAIN=auto
-
-RUN apk update && apk add --no-cache \
-    git \
-    build-base \
-    tzdata \
-    ffmpeg \
-    libjpeg-turbo-dev \
-    libwebp-dev \
-    ca-certificates \
-    postgresql-dev
+RUN apk update && apk add --no-cache git build-base libjpeg-turbo-dev libwebp-dev
 
 WORKDIR /build
 
-# O COPY . . agora deve funcionar pois você já resolveu o problema da whatsmeow-lib
-COPY . .
+# Copiar apenas arquivos de dependências primeiro para cachear o download
+COPY go.mod go.sum ./
 
-# Validação de segurança
-RUN if [ ! -f "./whatsmeow-lib/go.mod" ]; then \
-    echo "ERRO: whatsmeow-lib não encontrada!"; \
-    exit 1; \
-fi
-
-# Instala dependências (Agora com a versão de Go correta)
+# whatsmeow agora vem do proxy oficial (go.mau.fi/whatsmeow, sem replace local) —
+# não há mais submódulo whatsmeow-lib para copiar.
 RUN go mod download
+
+# Copiar o restante do código
+COPY . .
 
 ARG VERSION=dev
 RUN CGO_ENABLED=1 go build -ldflags "-X main.version=${VERSION}" -o server ./cmd/evolution-go
 
-FROM alpine:3.19 AS final
+FROM alpine:3.19.1 AS final
 
-RUN apk update && apk add --no-cache \
-    tzdata \
-    ffmpeg \
-    libjpeg-turbo \
-    libwebp \
-    ca-certificates \
-    libpq
+# poppler-utils provides pdftoppm, used to rasterize PDF page 1 for /send/media document thumbnails
+RUN apk update && apk add --no-cache tzdata ffmpeg libjpeg-turbo libwebp poppler-utils
 
 WORKDIR /app
 
@@ -48,6 +29,5 @@ COPY --from=build /build/manager/dist ./manager/dist
 COPY --from=build /build/VERSION ./VERSION
 
 ENV TZ=America/Sao_Paulo
-EXPOSE 8080
 
 ENTRYPOINT ["/app/server"]

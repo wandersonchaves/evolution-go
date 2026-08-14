@@ -68,9 +68,6 @@ make docker-run
 git clone https://github.com/evolution-foundation/evolution-go.git
 cd evolution-go
 
-# Clone whatsmeow dependency
-git clone git@github.com:evolution-foundation/whatsmeow.git whatsmeow-lib
-
 # Setup, configure and run
 make setup
 cp .env.example .env
@@ -127,7 +124,7 @@ LOGTYPE=console
 Evolution Go requires a license to operate. On first run:
 
 1. Start the server — API endpoints return `503` until activated
-2. Open the **Manager** at `{{baseURL}manager/login`
+2. Open the **Manager** at `http://localhost:8080/manager/login`
 3. Enter your API URL and `GLOBAL_API_KEY`
 4. Complete the license registration flow
 5. Once activated, the API is fully operational
@@ -141,7 +138,7 @@ The license status persists in the database (`runtime_configs` table). Heartbeat
 Swagger UI available at:
 
 ```
-{{baseURL}swagger/index.html
+http://localhost:8080/swagger/index.html
 ```
 
 ### Key Endpoints
@@ -172,7 +169,6 @@ evolution-go/
 │   ├── config/          # Configuration
 │   ├── events/          # Event producers (AMQP, NATS, Webhook, WS)
 │   └── storage/         # Media storage (MinIO)
-├── whatsmeow-lib/       # WhatsApp protocol library
 ├── docs/                # Swagger documentation
 ├── Dockerfile
 ├── Makefile
