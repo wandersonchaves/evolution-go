@@ -3,6 +3,7 @@ package config
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	"github.com/gomessguii/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	gormLogger "gorm.io/gorm/logger"
 
 	config_env "github.com/evolution-foundation/evolution-go/pkg/config/env"
 )
@@ -155,9 +157,21 @@ func (c *Config) CreateUsersDB() (*gorm.DB, error) {
 		logger.LogWarn("[CONFIG] Auto-setup failed (will try connecting anyway): %v", err)
 	}
 
+	newLogger := gormLogger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags),
+		gormLogger.Config{
+			SlowThreshold:             200 * time.Millisecond,
+			LogLevel:                  gormLogger.Warn,
+			IgnoreRecordNotFoundError: true,
+			Colorful:                  false,
+		},
+	)
+
 	db, err := gorm.Open(
 		postgres.Open(dbDSN),
-		&gorm.Config{},
+		&gorm.Config{
+			Logger: newLogger,
+		},
 	)
 	if err != nil {
 		return nil, err

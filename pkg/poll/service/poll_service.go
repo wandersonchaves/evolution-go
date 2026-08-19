@@ -45,6 +45,9 @@ func NewPollService(db *sql.DB, loggerWrapper *logger_wrapper.LoggerManager) Pol
 
 // autoMigrate cria a tabela poll_votes se não existir
 func (s *pollService) autoMigrate() error {
+	if s.db == nil {
+		return nil
+	}
 	createTableSQL := `
 		CREATE TABLE IF NOT EXISTS poll_votes (
 			id VARCHAR(255) PRIMARY KEY,

@@ -79,6 +79,8 @@ type clientVersion struct {
 type whatsmeowService struct {
 	instanceRepository instance_repository.InstanceRepository
 	authDB             *sql.DB
+	container          *sqlstore.Container
+	containerMutex     sync.Mutex
 	messageRepository  message_repository.MessageRepository
 	labelRepository    label_repository.LabelRepository
 	pollService        poll_service.PollService // NOVO: Serviço de enquetes
@@ -171,7 +173,47 @@ type ProxyConfig struct {
 	Username string `json:"username"`
 }
 
-func (w whatsmeowService) ReconnectClient(instanceId string) error {
+func (w *whatsmeowService) getContainer() (*sqlstore.Container, error) {
+	w.containerMutex.Lock()
+	defer w.containerMutex.Unlock()
+
+	if w.container != nil {
+		return w.container, nil
+	}
+
+	var container *sqlstore.Container
+	var err error
+
+	var dbLog waLog.Logger
+	if w.config.WaDebug != "" {
+		dbLog = waLog.Stdout("Database", w.config.WaDebug, true)
+	}
+
+	if w.config.PostgresAuthDB != "" {
+		if w.authDB != nil {
+			container = sqlstore.NewWithDB(w.authDB, "postgres", dbLog)
+			if err = container.Upgrade(context.Background()); err != nil {
+				return nil, fmt.Errorf("failed to upgrade postgres database: %w", err)
+			}
+		} else {
+			container, err = sqlstore.New(context.Background(), "postgres", w.config.PostgresAuthDB, dbLog)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create postgres container: %w", err)
+			}
+		}
+	} else {
+		dsn := fmt.Sprintf("file:%s/dbdata/main.db?_pragma=foreign_keys(1)&_busy_timeout=5000&cache=shared&mode=rwc&_journal_mode=WAL", w.exPath)
+		container, err = sqlstore.New(context.Background(), "sqlite", dsn, dbLog)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create sqlite container: %w", err)
+		}
+	}
+
+	w.container = container
+	return w.container, nil
+}
+
+func (w *whatsmeowService) ReconnectClient(instanceId string) error {
 	w.loggerWrapper.GetLogger(instanceId).LogInfo("[%s] Starting reconnection process - simulating restart", instanceId)
 
 	// Passo 1: Limpar conexão existente se houver
@@ -238,7 +280,7 @@ func (w whatsmeowService) ReconnectClient(instanceId string) error {
 	return w.StartInstance(instanceId)
 }
 
-func (w whatsmeowService) ForceUpdateJid(instanceId string, number string) error {
+func (w *whatsmeowService) ForceUpdateJid(instanceId string, number string) error {
 	instance, err := w.instanceRepository.GetInstanceByID(instanceId)
 	if err != nil {
 		w.loggerWrapper.GetLogger(instanceId).LogError("[%s] Error getting instance: %v", instanceId, err)
@@ -246,8 +288,16 @@ func (w whatsmeowService) ForceUpdateJid(instanceId string, number string) error
 	}
 
 	if instance.Jid == "" && number != "" {
+		db := w.authDB
+		if db == nil {
+			db = w.sqliteDB
+		}
+		if db == nil {
+			return fmt.Errorf("no database connection available for auth")
+		}
+
 		sqlDeviceSearch := fmt.Sprintf("SELECT jid FROM whatsmeow_device WHERE jid LIKE '%%%s%%'", number)
-		rows, err := w.authDB.Query(sqlDeviceSearch)
+		rows, err := db.Query(sqlDeviceSearch)
 		if err != nil {
 			w.loggerWrapper.GetLogger(instanceId).LogError("[%s] Error getting device: %v", instanceId, err)
 			return err
@@ -301,7 +351,7 @@ func (w whatsmeowService) ForceUpdateJid(instanceId string, number string) error
 	return nil
 }
 
-func (w whatsmeowService) StartClient(cd *ClientData) {
+func (w *whatsmeowService) StartClient(cd *ClientData) {
 
 	w.loggerWrapper.GetLogger(cd.Instance.Id).LogInfo("Starting websocket connection to Whatsapp for user '%s'", cd.Instance.Id)
 
@@ -314,27 +364,9 @@ func (w whatsmeowService) StartClient(cd *ClientData) {
 		}
 	}
 
-	var container *sqlstore.Container
-
-	if w.config.WaDebug != "" {
-		dbLog := waLog.Stdout("Database", w.config.WaDebug, true)
-		if w.config.PostgresAuthDB != "" {
-			container, err = sqlstore.New(context.Background(), "postgres", w.config.PostgresAuthDB, dbLog)
-		} else {
-			dsn := fmt.Sprintf("file:%s/dbdata/main.db?_pragma=foreign_keys(1)&_busy_timeout=5000&cache=shared&mode=rwc&_journal_mode=WAL", w.exPath)
-			container, err = sqlstore.New(context.Background(), "sqlite", dsn, dbLog)
-		}
-	} else {
-		if w.config.PostgresAuthDB != "" {
-			container, err = sqlstore.New(context.Background(), "postgres", w.config.PostgresAuthDB, nil)
-		} else {
-			dsn := fmt.Sprintf("file:%s/dbdata/main.db?_pragma=foreign_keys(1)&_busy_timeout=5000&cache=shared&mode=rwc&_journal_mode=WAL", w.exPath)
-			container, err = sqlstore.New(context.Background(), "sqlite", dsn, nil)
-		}
-	}
-
+	container, err := w.getContainer()
 	if err != nil {
-		w.loggerWrapper.GetLogger(cd.Instance.Id).LogError("[%s] Failed to create container: %v", cd.Instance.Id, err)
+		w.loggerWrapper.GetLogger(cd.Instance.Id).LogError("[%s] Failed to get container: %v", cd.Instance.Id, err)
 		return
 	}
 
@@ -465,7 +497,7 @@ func (w whatsmeowService) StartClient(cd *ClientData) {
 	client.AutoTrustIdentity = true
 
 	mycli := &MyClient{
-		service:            &w,
+		service:            w,
 		Instance:           cd.Instance,
 		WAClient:           client,
 		eventHandlerID:     1,
@@ -2320,7 +2352,7 @@ func (w *whatsmeowService) sendToQueueOrWebhook(instance *instance_model.Instanc
 	}
 }
 
-func (w whatsmeowService) StartInstance(instanceId string) error {
+func (w *whatsmeowService) StartInstance(instanceId string) error {
 	instance, err := w.instanceRepository.GetInstanceByID(instanceId)
 	if err != nil {
 		return err
@@ -2409,7 +2441,7 @@ func (w whatsmeowService) StartInstance(instanceId string) error {
 	return nil
 }
 
-func (w whatsmeowService) ConnectOnStartup(clientName string) {
+func (w *whatsmeowService) ConnectOnStartup(clientName string) {
 	w.loggerWrapper.GetLogger(clientName).LogInfo("Connecting all instances on startup")
 	var instances []*instance_model.Instance
 	var err error
@@ -2672,7 +2704,7 @@ func fetchWhatsAppWebVersion() (*clientVersion, error) {
 	return nil, fmt.Errorf("could not find client revision in the fetched content. Content preview: %s", content)
 }
 
-func (w whatsmeowService) UpdateInstanceSettings(instanceId string) error {
+func (w *whatsmeowService) UpdateInstanceSettings(instanceId string) error {
 	w.loggerWrapper.GetLogger(instanceId).LogInfo("[%s] Updating instance settings in runtime", instanceId)
 
 	// Busca a instância atualizada do banco
@@ -2731,7 +2763,7 @@ func (w whatsmeowService) UpdateInstanceSettings(instanceId string) error {
 	return nil
 }
 
-func (w whatsmeowService) UpdateInstanceAdvancedSettings(instanceId string) error {
+func (w *whatsmeowService) UpdateInstanceAdvancedSettings(instanceId string) error {
 	w.loggerWrapper.GetLogger(instanceId).LogInfo("[%s] Updating advanced settings in runtime", instanceId)
 
 	// Busca a instância atualizada do banco
@@ -2755,7 +2787,7 @@ func (w whatsmeowService) UpdateInstanceAdvancedSettings(instanceId string) erro
 	return nil
 }
 
-func (w whatsmeowService) ClearInstanceCache(instanceId string, token string) error {
+func (w *whatsmeowService) ClearInstanceCache(instanceId string, token string) error {
 	w.loggerWrapper.GetLogger(instanceId).LogInfo("[%s] Clearing instance cache - Token: %s", instanceId, token)
 
 	// Limpar userInfoCache
@@ -2810,7 +2842,7 @@ func NewWhatsmeowService(
 	// Inicializar PollService de forma segura
 	pollSvc := poll_service.NewPollService(authDB, loggerWrapper)
 
-	return &whatsmeowService{
+	svc := &whatsmeowService{
 		instanceRepository: instanceRepository,
 		authDB:             authDB,
 		messageRepository:  messageRepository,
@@ -2832,6 +2864,13 @@ func NewWhatsmeowService(
 		loggerWrapper:      loggerWrapper,
 		passkeyCeremony:    ceremony.NewStore(),
 	}
+
+	// Pré-inicializar o container compartilhado
+	if _, err := svc.getContainer(); err != nil {
+		logger_wrapper.NewLoggerManager(config).GetLogger("whatsmeow-service").LogError("Failed to pre-initialize shared container: %v", err)
+	}
+
+	return svc
 }
 
 // GetPollService retorna o serviço de polls (evita dupla inicialização)

@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/evolution-foundation/evolution-go/pkg/config"
 	"github.com/gin-gonic/gin"
-	"github.com/EvolutionAPI/evolution-go/pkg/config"
 )
 
 type TelemetryData struct {

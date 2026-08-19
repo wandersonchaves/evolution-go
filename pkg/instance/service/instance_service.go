@@ -162,7 +162,7 @@ func (i *instances) ensureClientConnected(instanceId string) (*whatsmeow.Client,
 	return client, nil
 }
 
-func (i instances) Create(data *CreateStruct) (*instance_model.Instance, error) {
+func (i *instances) Create(data *CreateStruct) (*instance_model.Instance, error) {
 	if data.Proxy != nil {
 		data.Proxy.Protocol = utils.NormalizeProxyProtocol(data.Proxy.Protocol, data.Proxy.Port)
 	}
@@ -206,7 +206,7 @@ func (i instances) Create(data *CreateStruct) (*instance_model.Instance, error) 
 	return createdInstance, nil
 }
 
-func (i instances) Connect(data *ConnectStruct, instance *instance_model.Instance) (*instance_model.Instance, string, string, error) {
+func (i *instances) Connect(data *ConnectStruct, instance *instance_model.Instance) (*instance_model.Instance, string, string, error) {
 	var subscribedEvents []string
 
 	i.loggerWrapper.GetLogger(instance.Id).LogInfo("[%s] Processing subscribe events: %v", instance.Id, data.Subscribe)
@@ -299,7 +299,7 @@ func (i instances) Connect(data *ConnectStruct, instance *instance_model.Instanc
 	return instance, instance.Jid, eventString, nil
 }
 
-func (i instances) Reconnect(instance *instance_model.Instance) error {
+func (i *instances) Reconnect(instance *instance_model.Instance) error {
 	_, err := i.ensureClientConnected(instance.Id)
 	if err != nil {
 		return err
@@ -308,7 +308,7 @@ func (i instances) Reconnect(instance *instance_model.Instance) error {
 	return i.whatsmeowService.ReconnectClient(instance.Id)
 }
 
-func (i instances) Disconnect(instance *instance_model.Instance) (*instance_model.Instance, error) {
+func (i *instances) Disconnect(instance *instance_model.Instance) (*instance_model.Instance, error) {
 	client, err := i.ensureClientConnected(instance.Id)
 	if err != nil {
 		return instance, err
@@ -334,7 +334,7 @@ func (i instances) Disconnect(instance *instance_model.Instance) (*instance_mode
 	return instance, nil
 }
 
-func (i instances) Logout(instance *instance_model.Instance) (*instance_model.Instance, error) {
+func (i *instances) Logout(instance *instance_model.Instance) (*instance_model.Instance, error) {
 	client, err := i.ensureClientConnected(instance.Id)
 	if err != nil {
 		return instance, err
@@ -383,7 +383,7 @@ func (i instances) Logout(instance *instance_model.Instance) (*instance_model.In
 	return instance, fmt.Errorf("ignoring logout as it was not connected")
 }
 
-func (i instances) Status(instance *instance_model.Instance) (*StatusStruct, error) {
+func (i *instances) Status(instance *instance_model.Instance) (*StatusStruct, error) {
 	client := i.clientPointer[instance.Id]
 
 	if client == nil {
@@ -411,7 +411,7 @@ func (i instances) Status(instance *instance_model.Instance) (*StatusStruct, err
 	}, nil
 }
 
-func (i instances) GetQr(instance *instance_model.Instance) (*QrcodeStruct, error) {
+func (i *instances) GetQr(instance *instance_model.Instance) (*QrcodeStruct, error) {
 	logger := i.loggerWrapper.GetLogger(instance.Id)
 	client := i.clientPointer[instance.Id]
 
@@ -509,7 +509,7 @@ func buildPasskeyOpenURL(token string) string {
 	return "https://web.whatsapp.com/#wapk=" + wapk
 }
 
-func (i instances) Pair(data *PairStruct, instance *instance_model.Instance) (*PairReturnStruct, error) {
+func (i *instances) Pair(data *PairStruct, instance *instance_model.Instance) (*PairReturnStruct, error) {
 	logger := i.loggerWrapper.GetLogger(instance.Id)
 	client := i.clientPointer[instance.Id]
 
@@ -544,7 +544,7 @@ func (i instances) Pair(data *PairStruct, instance *instance_model.Instance) (*P
 	return &PairReturnStruct{PairingCode: code}, nil
 }
 
-func (i instances) GetAll() ([]*instance_model.Instance, error) {
+func (i *instances) GetAll() ([]*instance_model.Instance, error) {
 	instances, err := i.instanceRepository.GetAll(i.config.ClientName)
 	if err != nil {
 		return nil, err
@@ -563,7 +563,7 @@ func (i instances) GetAll() ([]*instance_model.Instance, error) {
 	return instances, nil
 }
 
-func (i instances) Info(instanceId string) (*instance_model.Instance, error) {
+func (i *instances) Info(instanceId string) (*instance_model.Instance, error) {
 	instance, err := i.instanceRepository.GetInstanceByID(instanceId)
 	if err != nil {
 		return nil, err
@@ -581,7 +581,7 @@ func (i instances) Info(instanceId string) (*instance_model.Instance, error) {
 	return instance, nil
 }
 
-func (i instances) Delete(id string) error {
+func (i *instances) Delete(id string) error {
 	instance, err := i.instanceRepository.GetInstanceByID(id)
 	if err != nil {
 		return err
@@ -615,7 +615,7 @@ func (i instances) Delete(id string) error {
 	return nil
 }
 
-func (i instances) SetProxy(id string, proxyConfig *ProxyConfig) error {
+func (i *instances) SetProxy(id string, proxyConfig *ProxyConfig) error {
 	instance, err := i.instanceRepository.GetInstanceByID(id)
 	if err != nil {
 		return err
@@ -660,7 +660,7 @@ func (i instances) SetProxy(id string, proxyConfig *ProxyConfig) error {
 	return nil
 }
 
-func (i instances) SetProxyFromStruct(id string, data *SetProxyStruct) error {
+func (i *instances) SetProxyFromStruct(id string, data *SetProxyStruct) error {
 	if data == nil {
 		return fmt.Errorf("proxy data cannot be nil")
 	}
@@ -676,7 +676,7 @@ func (i instances) SetProxyFromStruct(id string, data *SetProxyStruct) error {
 	return i.SetProxy(id, proxyConfig)
 }
 
-func (i instances) RemoveProxy(id string) error {
+func (i *instances) RemoveProxy(id string) error {
 	instance, err := i.instanceRepository.GetInstanceByID(id)
 	if err != nil {
 		return err
@@ -696,7 +696,7 @@ func (i instances) RemoveProxy(id string) error {
 	return nil
 }
 
-func (i instances) ForceReconnect(instanceId string, number string) error {
+func (i *instances) ForceReconnect(instanceId string, number string) error {
 	if i.clientPointer[instanceId].IsConnected() && i.clientPointer[instanceId].IsLoggedIn() {
 		return fmt.Errorf("client already connected")
 	}
@@ -767,11 +767,11 @@ func (i instances) ForceReconnect(instanceId string, number string) error {
 	return nil
 }
 
-func (i instances) GetInstanceByToken(token string) (*instance_model.Instance, error) {
+func (i *instances) GetInstanceByToken(token string) (*instance_model.Instance, error) {
 	return i.instanceRepository.GetInstanceByToken(token)
 }
 
-func (i instances) GetLogs(instanceId string, startDate, endDate time.Time, level string, limit int) ([]logger_wrapper.LogEntry, error) {
+func (i *instances) GetLogs(instanceId string, startDate, endDate time.Time, level string, limit int) ([]logger_wrapper.LogEntry, error) {
 	// Inicializa o slice vazio para garantir que nunca retorne null
 	logs := make([]logger_wrapper.LogEntry, 0)
 
@@ -878,7 +878,7 @@ func (i instances) GetLogs(instanceId string, startDate, endDate time.Time, leve
 	return logs, nil
 }
 
-func (i instances) GetAdvancedSettings(instanceId string) (*instance_model.AdvancedSettings, error) {
+func (i *instances) GetAdvancedSettings(instanceId string) (*instance_model.AdvancedSettings, error) {
 	i.loggerWrapper.GetLogger(instanceId).LogInfo("[%s] Getting advanced settings", instanceId)
 
 	settings, err := i.instanceRepository.GetAdvancedSettings(instanceId)
@@ -890,7 +890,7 @@ func (i instances) GetAdvancedSettings(instanceId string) (*instance_model.Advan
 	return settings, nil
 }
 
-func (i instances) UpdateAdvancedSettings(instanceId string, settings *instance_model.AdvancedSettings) error {
+func (i *instances) UpdateAdvancedSettings(instanceId string, settings *instance_model.AdvancedSettings) error {
 	i.loggerWrapper.GetLogger(instanceId).LogInfo("[%s] Updating advanced settings", instanceId)
 
 	err := i.instanceRepository.UpdateAdvancedSettings(instanceId, settings)
